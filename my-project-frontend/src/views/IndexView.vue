@@ -2,20 +2,26 @@
 import {get, logout} from '@/net'
 import router from "@/router";
 import {useStore} from "@/store";
-import {ref} from "vue";
+import {reactive, ref} from "vue";
 import {
+  Back,
   Bell,
   ChatDotSquare, Collection, DataLine,
   Document, Files,
-  Location, Lock, Monitor,
+  Location, Lock, Message, Monitor,
   Notification, Operation,
   Position,
-  School,
+  School, Search,
   Umbrella, User
 } from "@element-plus/icons-vue";
 
 const store = useStore()
 const loading = ref(true)
+
+const searchInput = reactive({
+  type: '1',
+  text: ''
+})
 
 get('/api/user/info', (data) => {
   store.user = data
@@ -32,19 +38,51 @@ function userLogout() {
     <el-container style="height: 100%" v-if="!loading">
       <el-header class="main-content-header">
         <el-image class="logo" src="https://element-plus.org/images/element-plus-logo.svg"/>
-        <div style="flex: 1" class="user-info">
+        <div style="flex: 1;padding: 0 20px;text-align: center">
+          <el-input v-model="searchInput.text" style="width: 100%;max-width: 500px" placeholder="搜索论坛相关内容...">
+            <template #prefix>
+              <el-icon><Search/></el-icon>
+            </template>
+            <template #append>
+              <el-select style="width: 120px" v-model="searchInput.type">
+                <el-option value="1" label="帖子广场"/>
+                <el-option value="2" label="校园活动"/>
+                <el-option value="3" label="表白墙"/>
+                <el-option value="4" label="教务通知"/>
+              </el-select>
+            </template>
+          </el-input>
+        </div>
+        <div class="user-info">
           <div class="profile">
             <div>{{store.user.username}}</div>
             <div>{{store.user.email}}</div>
           </div>
-          <el-avatar src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"/>
+          <el-dropdown>
+            <el-avatar src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"/>
+            <template #dropdown>
+              <el-dropdown-item>
+                <el-icon><Operation/></el-icon>
+                个人设置
+              </el-dropdown-item>
+              <el-dropdown-item>
+                <el-icon><Message/></el-icon>
+                消息列表
+              </el-dropdown-item>
+              <el-dropdown-item @click="userLogout" divided>
+                <el-icon><Back/></el-icon>
+                退出登录
+              </el-dropdown-item>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
       <el-container>
         <el-aside width="230px">
           <el-scrollbar style="height: calc(100vh - 55px)">
             <el-menu
-                default-active="1-1"
+                router
+                :default-active="$route.path"
                 style="min-height: calc(100vh - 55px)">
               <el-sub-menu index="1">
                 <template #title>
@@ -124,7 +162,7 @@ function userLogout() {
                   <el-icon><Operation/></el-icon>
                   <span><b>个人设置</b></span>
                 </template>
-                <el-menu-item>
+                <el-menu-item index="/index/user-setting">
                   <template #title>
                     <el-icon><User/></el-icon>
                     个人信息设置
@@ -140,13 +178,30 @@ function userLogout() {
             </el-menu>
           </el-scrollbar>
         </el-aside>
-        <el-main>Main</el-main>
+        <el-main class="main-content-page">
+          <el-scrollbar style="height: calc(100vh - 55px)">
+            <router-view v-slot="{ Component }">
+              <transition name="el-fade-in-linear" mode="out-in">
+                <component :is="Component" style="height: 100%"/>
+              </transition>
+            </router-view>
+          </el-scrollbar>
+        </el-main>
       </el-container>
     </el-container>
   </div>
 </template>
 
 <style lang="less" scoped>
+.main-content-page {
+  padding: 0;
+  background-color: #f7f8fa;
+}
+
+.dark .main-content-page {
+  background-color: #212225;
+}
+
 .main-content {
   height: 100vh;
   width: 100vw;
@@ -167,6 +222,10 @@ function userLogout() {
     display: flex;
     justify-content: flex-end;
     align-items: center;
+
+    .el-avatar:hover {
+      cursor: pointer;
+    }
 
     .profile {
       text-align: right;
