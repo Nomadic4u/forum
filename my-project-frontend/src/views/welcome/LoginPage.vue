@@ -7,7 +7,7 @@
     <div style="margin-top: 50px">
       <el-form :model="form" :rules="rules" ref="formRef">
         <el-form-item prop="username">
-          <el-input v-model="form.username" maxlength="10" type="text" placeholder="用户名/邮箱">
+          <el-input v-model="form.username" maxlength="20" type="text" placeholder="用户名/邮箱">
             <template #prefix>
               <el-icon>
                 <User/>
