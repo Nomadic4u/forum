@@ -3,16 +3,12 @@ package com.example.service.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.dto.Account;
-import com.example.entity.vo.request.ConfirmResetVO;
-import com.example.entity.vo.request.EmailRegisterVO;
-import com.example.entity.vo.request.EmailResetVO;
-import com.example.entity.vo.request.ModifyEmailVO;
+import com.example.entity.vo.request.*;
 import com.example.mapper.AccountMapper;
 import com.example.service.AccountService;
 import com.example.utils.Const;
 import com.example.utils.FlowUtils;
 import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -159,6 +155,18 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 .eq("id", id)
                 .update();
         return null;
+    }
+
+    @Override
+    public String changePassword(int id, ChangePasswordVO vo) {
+        String password = this.query().eq("id", id).one().getPassword();
+        if(!passwordEncoder.matches(vo.getPassword(), password))
+            return "原密码错误，请重新输入！";
+        boolean success = this.update()
+                .eq("id", id)
+                .set("password", passwordEncoder.encode(vo.getNew_password()))
+                .update();
+        return success ? null : "未知错误，请联系管理员";
     }
 
     /**
