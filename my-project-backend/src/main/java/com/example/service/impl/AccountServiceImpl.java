@@ -99,7 +99,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         if(this.existsAccountByUsername(username)) return "该用户名已被他人使用，请重新更换";
         String password = passwordEncoder.encode(info.getPassword());
         Account account = new Account(null, info.getUsername(),
-                password, email, Const.ROLE_DEFAULT, new Date());
+                password, email, Const.ROLE_DEFAULT, null, new Date());
         if(!this.save(account)) {
             return "内部错误，注册失败";
         } else {

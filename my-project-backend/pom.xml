@@ -94,6 +94,12 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>2.1.0</version>
         </dependency>
+        <!--     对象存储Minio依赖     -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.3.9</version>
+        </dependency>
     </dependencies>
 
     <profiles>
