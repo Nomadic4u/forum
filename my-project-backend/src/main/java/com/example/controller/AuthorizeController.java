@@ -16,8 +16,6 @@ import jakarta.validation.constraints.Pattern;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.function.Supplier;
-
 /**
  * 用于验证相关Controller包含用户的注册、重置密码等操作
  */
