@@ -2,11 +2,39 @@
 import LightCard from "@/components/LightCard.vue";
 import {Calendar, CollectionTag, EditPen, Link} from "@element-plus/icons-vue";
 import Weather from "@/components/Weather.vue";
-import {computed} from "vue";
+import {computed, reactive} from "vue";
+import {get} from "@/net";
+import {ElMessage} from "element-plus";
+
+const weather = reactive({
+    location: {},
+    now: {},
+    hourly: [],
+    success: false
+})
 
 const today = computed(() => {
     const date = new Date()
     return `${date.getFullYear()} 年 ${date.getMonth()} 月 ${date.getDay()} 日`
+})
+
+navigator.geolocation.getCurrentPosition(position => {
+    const longitude = position.coords.longitude
+    const latitude = position.coords.latitude
+    get(`/api/forum/weather?longitude=${longitude}&latitude=${latitude}`, data => {
+        Object.assign(weather, data)
+        weather.success = true
+    })
+}, error => {
+    console.info(error)
+    ElMessage.warning('位置信息获取超时，请检测网络设置')
+    get(`/api/forum/weather?longitude=116.40529&latitude=39.90499`, data => {
+        Object.assign(weather, data)
+        weather.success = true
+    })
+}, {
+    timeout: 3000,
+    enableHighAccuracy: true
 })
 </script>
 
@@ -45,7 +73,7 @@ const today = computed(() => {
                         天气信息
                     </div>
                     <el-divider style="margin: 10px 0"/>
-                    <weather/>
+                    <weather :data="weather"/>
                 </light-card>
                 <light-card style="margin-top: 10px">
                     <div class="info-text">
