@@ -1,14 +1,17 @@
 package com.example.controller;
 
+import com.alibaba.fastjson2.JSONObject;
 import com.example.entity.RestBean;
+import com.example.entity.vo.request.TopicCreateVO;
 import com.example.entity.vo.response.TopicTypeVO;
 import com.example.entity.vo.response.WeatherVO;
 import com.example.service.TopicService;
 import com.example.service.WeatherService;
+import com.example.utils.Const;
+import com.example.utils.ControllerUtils;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,6 +24,9 @@ public class ForumController {
 
     @Resource
     TopicService topicService;
+
+    @Resource
+    ControllerUtils utils;
 
     @GetMapping("/weather")
     public RestBean<WeatherVO> weather(double longitude, double latitude){
@@ -36,5 +42,11 @@ public class ForumController {
                 .stream()
                 .map(type -> type.asViewObject(TopicTypeVO.class))
                 .toList());
+    }
+
+    @PostMapping("/create-topic")
+    public RestBean<Void> createTopic(@Valid @RequestBody TopicCreateVO vo,
+                                      @RequestAttribute(Const.ATTR_USER_ID) int id) {
+        return utils.messageHandle(() -> topicService.createTopic(id, vo));
     }
 }

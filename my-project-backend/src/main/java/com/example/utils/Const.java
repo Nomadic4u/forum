@@ -25,4 +25,5 @@ public final class Const {
     //论坛相关
     public final static String FORUM_WEATHER_CACHE = "weather:cache:";
     public final static String FORUM_IMAGE_COUNTER = "forum:image:";
+    public final static String FORUM_TOPIC_CREATE_COUNTER = "forum:topic:create:";
 }
