@@ -8,6 +8,7 @@ import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import axios from "axios";
 import {accessHeader, get, post} from "@/net";
 import {ElMessage} from "element-plus";
+import ColorDot from "@/components/ColorDot.vue";
 
 defineProps({
     show: Boolean
@@ -55,7 +56,7 @@ function submitTopic() {
         return
     }
     post('/api/forum/create-topic', {
-        type: editor.type,
+        type: editor.type.id,
         title: editor.title,
         content: editor.text
     }, () => {
@@ -136,8 +137,13 @@ const editorOption = {
             </template>
             <div style="display: flex;gap: 10px">
                 <div style="width: 150px">
-                    <el-select placeholder="选择主题类型..." v-model="editor.type" :disabled="!editor.types.length">
-                        <el-option v-for="item in editor.types" :value="item.id" :label="item.name"/>
+                    <el-select placeholder="选择主题类型..." value-key="id" v-model="editor.type" :disabled="!editor.types.length">
+                        <el-option v-for="item in editor.types" :value="item" :label="item.name">
+                            <div>
+                                <color-dot :color="item.color"/>
+                                <span style="margin-left: 10px">{{item.name}}</span>
+                            </div>
+                        </el-option>
                     </el-select>
                 </div>
                 <div style="flex: 1">
@@ -145,7 +151,11 @@ const editorOption = {
                               style="height: 100%" maxlength="30"/>
                 </div>
             </div>
-            <div style="margin-top: 15px;height: 460px;overflow: hidden;border-radius: 5px"
+            <div style="margin-top: 5px;font-size: 13px;color: grey">
+                <color-dot :color="editor.type.color"/>
+                <span style="margin-left: 5px">{{editor.type ? editor.type.desc : '请在上方选择一个帖子类型'}}</span>
+            </div>
+            <div style="margin-top: 10px;height: 440px;overflow: hidden;border-radius: 5px"
                  v-loading="editor.uploading"
                  element-loading-text="这种上传图片，请稍后...">
                 <quill-editor v-model:content="editor.text" style="height: calc(100% - 45px)"

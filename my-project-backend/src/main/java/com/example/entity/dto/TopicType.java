@@ -12,4 +12,5 @@ public class TopicType implements BaseData {
     String name;
     @TableField("`desc`")
     String desc;
+    String color;
 }
