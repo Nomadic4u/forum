@@ -14,11 +14,13 @@ const weather = reactive({
     success: false
 })
 const editor = ref(false)
+const list = ref(null)
 
 const today = computed(() => {
     const date = new Date()
     return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月 ${date.getDate()} 日`
 })
+get('/api/forum/list-topic?page=0&type=0', data => list.value = data)
 
 navigator.geolocation.getCurrentPosition(position => {
     const longitude = position.coords.longitude
@@ -51,8 +53,9 @@ navigator.geolocation.getCurrentPosition(position => {
             <light-card style="margin-top: 10px;height: 30px">
             </light-card>
             <div style="margin-top: 10px;display: flex;flex-direction: column;gap: 10px">
-                <light-card style="height: 150px" v-for="item in 10">
-
+                <light-card v-for="item in list">
+                    <div>{{item.title}}</div>
+                    <div>{{item.text}}</div>
                 </light-card>
             </div>
         </div>

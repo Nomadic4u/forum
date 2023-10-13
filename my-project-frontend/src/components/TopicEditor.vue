@@ -152,7 +152,7 @@ const editorOption = {
                 </div>
             </div>
             <div style="margin-top: 5px;font-size: 13px;color: grey">
-                <color-dot :color="editor.type.color"/>
+                <color-dot :color="editor.type ? editor.type.color : '#dedede'"/>
                 <span style="margin-left: 5px">{{editor.type ? editor.type.desc : '请在上方选择一个帖子类型'}}</span>
             </div>
             <div style="margin-top: 10px;height: 440px;overflow: hidden;border-radius: 5px"
