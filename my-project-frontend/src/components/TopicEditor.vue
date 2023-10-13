@@ -9,6 +9,9 @@ import axios from "axios";
 import {accessHeader, get, post} from "@/net";
 import {ElMessage} from "element-plus";
 import ColorDot from "@/components/ColorDot.vue";
+import {useStore} from "@/store";
+
+const store = useStore()
 
 defineProps({
     show: Boolean
@@ -21,8 +24,7 @@ const editor = reactive({
     type: null,
     title: '',
     text: '',
-    loading: false,
-    types: []
+    loading: false
 })
 
 function initEditor() {
@@ -64,8 +66,6 @@ function submitTopic() {
         emit('success')
     })
 }
-
-get('/api/forum/types', data => editor.types = data)
 
 Quill.register('modules/imageResize', ImageResize)
 Quill.register('modules/ImageExtend', ImageExtend)
@@ -137,8 +137,8 @@ const editorOption = {
             </template>
             <div style="display: flex;gap: 10px">
                 <div style="width: 150px">
-                    <el-select placeholder="选择主题类型..." value-key="id" v-model="editor.type" :disabled="!editor.types.length">
-                        <el-option v-for="item in editor.types" :value="item" :label="item.name">
+                    <el-select placeholder="选择主题类型..." value-key="id" v-model="editor.type" :disabled="!store.forum.types.length">
+                        <el-option v-for="item in store.forum.types" :value="item" :label="item.name">
                             <div>
                                 <color-dot :color="item.color"/>
                                 <span style="margin-left: 10px">{{item.name}}</span>
