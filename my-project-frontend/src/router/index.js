@@ -32,6 +32,10 @@ const router = createRouter({
                     path: '',
                     name: 'topic-list',
                     component: () => import('@/views/forum/TopicList.vue')
+                },{
+                    path: 'topic-detail/:tid',
+                    name: 'topic-detail',
+                    component: () => import('@/views/forum/TopicDetail.vue')
                 }, {
                     path: 'user-setting',
                     name: 'user-setting',

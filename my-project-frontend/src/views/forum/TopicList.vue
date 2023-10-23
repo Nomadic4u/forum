@@ -20,6 +20,7 @@ import TopicEditor from "@/components/TopicEditor.vue";
 import {useStore} from "@/store";
 import axios from "axios";
 import ColorDot from "@/components/ColorDot.vue";
+import router from "@/router";
 
 const store = useStore()
 
@@ -129,7 +130,8 @@ navigator.geolocation.getCurrentPosition(position => {
                 <div v-if="topics.list.length">
                     <div style="margin-top: 10px;display: flex;flex-direction: column;gap: 10px"
                          v-infinite-scroll="updateList">
-                        <light-card v-for="item in topics.list" class="topic-card">
+                        <light-card v-for="item in topics.list" class="topic-card"
+                                    @click="router.push('/index/topic-detail/'+item.id)">
                             <div style="display: flex">
                                 <div>
                                     <el-avatar :size="30" :src="`${axios.defaults.baseURL}/images${item.avatar}`"/>
