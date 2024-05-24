@@ -61,6 +61,12 @@ public class AccountController {
         return RestBean.success(details.asViewObject(AccountDetailsVO.class));
     }
 
+    /**
+     * 用户保存个人信息信息
+     * @param id 用户id
+     * @param vo 用户详细信息vo类
+     * @return 用户详细信息实体类
+     */
     @PostMapping("/save-details")
     public RestBean<Void> saveDetails(@RequestAttribute(Const.ATTR_USER_ID) int id,
                                       @RequestBody @Valid DetailsSaveVO vo){
@@ -68,6 +74,12 @@ public class AccountController {
         return success ? RestBean.success() : RestBean.failure(400, "此用户名已被其他用户使用，请重新更换！");
     }
 
+    /**
+     * 更改邮箱
+     * @param id 用户id
+     * @param vo 更改邮箱实体类
+     * @return
+     */
     @PostMapping("/modify-email")
     public RestBean<Void> modifyEmail(@RequestAttribute(Const.ATTR_USER_ID) int id,
                                       @RequestBody @Valid ModifyEmailVO vo){
