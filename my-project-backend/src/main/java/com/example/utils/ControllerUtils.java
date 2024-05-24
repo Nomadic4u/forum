@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.function.Supplier;
 
+// 函数式编程
 @Component
 public class ControllerUtils {
     public  <T> RestBean<T> messageHandle(Supplier<String> action){

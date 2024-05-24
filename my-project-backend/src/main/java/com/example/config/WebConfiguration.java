@@ -15,16 +15,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfiguration implements WebMvcConfigurer {
 
+    // 使用 BCrypt 进行密码加密的 bean
     @Bean
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
 
+    // 用于执行同步 HTTP 请求的 bean
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
 
+    // MyBatis-Plus 的分页拦截器 bean，设置为 MySQL 数据库，分页最大限制为 100 条记录
     @Bean
     public PaginationInnerInterceptor paginationInterceptor() {
         PaginationInnerInterceptor paginationInnerInterceptor = new PaginationInnerInterceptor(DbType.MYSQL);

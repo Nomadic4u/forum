@@ -10,17 +10,17 @@ mybatis-plus:
 spring:
   mail:
     host: smtp.163.com
-    username: javastudy111@163.com
-    password: VKQFYZMUSUZGSGEG
+    username: 18989152637@163.com
+    password: EUMJBGDXOGPXPDOO
   rabbitmq:
     addresses: localhost
     username: admin
     password: admin
     virtual-host: /
   datasource:
-    url: jdbc:mysql://localhost:3306/test
+    url: jdbc:mysql://8.137.50.120:3306/study
     username: root
-    password: 123456
+    password: 20031213dmy
     driver-class-name: com.mysql.cj.jdbc.Driver
   security:
     jwt:
@@ -44,8 +44,8 @@ spring:
       credentials: false
       methods: '*'
   minio:
-    endpoint: 'http://localhost:9000'
+    endpoint: 'http://8.137.50.120:9000'
     username: 'minio'
-    password: 'password'
+    password: 'password''
   weather:
-    key: 7abbc24d3b4443b597a3b3c676e0f221
+    key: 37bbdfd307da4b5ead3242193381a7bd

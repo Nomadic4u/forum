@@ -37,12 +37,22 @@ public class AccountController {
     @Resource
     ControllerUtils utils;
 
+    /**
+     * 查询用户个人信息
+     * @param id 用户id, 这里经过了预处理, 放在了request中
+     * @return 用户实体类
+     */
     @GetMapping("/info")
     public RestBean<AccountVO> info(@RequestAttribute(Const.ATTR_USER_ID) int id){
         Account account = service.findAccountById(id);
         return RestBean.success(account.asViewObject(AccountVO.class));
     }
 
+    /**
+     * 查询用户详细信息
+     * @param id 用户id
+     * @return 用户详细信息实体类
+     */
     @GetMapping("/details")
     public RestBean<AccountDetailsVO> details(@RequestAttribute(Const.ATTR_USER_ID) int id){
         AccountDetails details = Optional

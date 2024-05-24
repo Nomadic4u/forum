@@ -45,6 +45,7 @@ public class SecurityConfiguration {
 
     /**
      * 针对于 SpringSecurity 6 的新版配置方法
+     *
      * @param http 配置器
      * @return 自动构建的内置过滤器链
      * @throws Exception 可能的异常
@@ -85,8 +86,9 @@ public class SecurityConfiguration {
      * - 登录成功
      * - 登录失败
      * - 未登录拦截/无权限拦截
-     * @param request 请求
-     * @param response 响应
+     *
+     * @param request                   请求
+     * @param response                  响应
      * @param exceptionOrAuthentication 异常或是验证实体
      * @throws IOException 可能的异常
      */
@@ -95,17 +97,17 @@ public class SecurityConfiguration {
                                Object exceptionOrAuthentication) throws IOException {
         response.setContentType("application/json;charset=utf-8");
         PrintWriter writer = response.getWriter();
-        if(exceptionOrAuthentication instanceof AccessDeniedException exception) {
+        if (exceptionOrAuthentication instanceof AccessDeniedException exception) {
             writer.write(RestBean
                     .forbidden(exception.getMessage()).asJsonString());
-        } else if(exceptionOrAuthentication instanceof Exception exception) {
+        } else if (exceptionOrAuthentication instanceof Exception exception) {
             writer.write(RestBean
                     .unauthorized(exception.getMessage()).asJsonString());
-        } else if(exceptionOrAuthentication instanceof Authentication authentication){
+        } else if (exceptionOrAuthentication instanceof Authentication authentication) {
             User user = (User) authentication.getPrincipal();
             Account account = service.findAccountByNameOrEmail(user.getUsername());
             String jwt = utils.createJwt(user, account.getUsername(), account.getId());
-            if(jwt == null) {
+            if (jwt == null) {
                 writer.write(RestBean.forbidden("登录验证频繁，请稍后再试").asJsonString());
             } else {
                 AuthorizeVO vo = account.asViewObject(AuthorizeVO.class, o -> o.setToken(jwt));
@@ -117,8 +119,9 @@ public class SecurityConfiguration {
 
     /**
      * 退出登录处理，将对应的Jwt令牌列入黑名单不再使用
-     * @param request 请求
-     * @param response 响应
+     *
+     * @param request        请求
+     * @param response       响应
      * @param authentication 验证实体
      * @throws IOException 可能的异常
      */
@@ -128,7 +131,7 @@ public class SecurityConfiguration {
         response.setContentType("application/json;charset=utf-8");
         PrintWriter writer = response.getWriter();
         String authorization = request.getHeader("Authorization");
-        if(utils.invalidateJwt(authorization)) {
+        if (utils.invalidateJwt(authorization)) {
             writer.write(RestBean.success("退出登录成功").asJsonString());
             return;
         }
