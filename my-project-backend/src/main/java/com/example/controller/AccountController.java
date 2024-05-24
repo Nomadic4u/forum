@@ -78,7 +78,7 @@ public class AccountController {
      * 更改邮箱
      * @param id 用户id
      * @param vo 更改邮箱实体类
-     * @return
+     * @return 是否成功
      */
     @PostMapping("/modify-email")
     public RestBean<Void> modifyEmail(@RequestAttribute(Const.ATTR_USER_ID) int id,
