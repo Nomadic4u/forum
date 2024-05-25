@@ -24,6 +24,7 @@ spring:
       port: 6379
       host: 8.137.50.120
       password: 20031213dmy
+      database: 2
   security:
     jwt:
       key: 'abcdefghijklmn'
