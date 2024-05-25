@@ -86,12 +86,24 @@ public class AccountController {
         return utils.messageHandle(() -> service.modifyEmail(id, vo));
     }
 
+    /**
+     * 修改密码
+     * @param id 用户id
+     * @param vo 修改密码实体类
+     * @return 是否成功
+     */
     @PostMapping("/change-password")
     public RestBean<Void> changePassword(@RequestAttribute(Const.ATTR_USER_ID) int id,
                                          @RequestBody @Valid ChangePasswordVO vo){
         return utils.messageHandle(() -> service.changePassword(id, vo));
     }
 
+    /**
+     * 用户隐私设置, 是否展示对应的隐私
+     * @param id 用户id
+     * @param vo 隐私展示实体类
+     * @return 是否成功
+     */
     @PostMapping("/save-privacy")
     public RestBean<Void> savePrivacy(@RequestAttribute(Const.ATTR_USER_ID) int id,
                                       @RequestBody @Valid PrivacySaveVO vo){
@@ -99,6 +111,11 @@ public class AccountController {
         return RestBean.success();
     }
 
+    /**
+     * 获取可展示的隐私信息
+     * @param id 用户id
+     * @return 可展示隐私信息实体类
+     */
     @GetMapping("/privacy")
     public RestBean<AccountPrivacyVO> privacy(@RequestAttribute(Const.ATTR_USER_ID) int id){
         return RestBean.success(privacyService.accountPrivacy(id).asViewObject(AccountPrivacyVO.class));

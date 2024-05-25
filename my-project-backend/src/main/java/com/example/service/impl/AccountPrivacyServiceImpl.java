@@ -14,12 +14,12 @@ import java.util.Optional;
 public class AccountPrivacyServiceImpl extends ServiceImpl<AccountPrivacyMapper, AccountPrivacy> implements AccountPrivacyService {
 
     @Override
-    @Transactional
+    @Transactional // 事务
     public void savePrivacy(int id, PrivacySaveVO vo) {
         AccountPrivacy privacy = Optional.ofNullable(this.getById(id)).orElse(new AccountPrivacy(id));
         boolean status = vo.isStatus();
         switch (vo.getType()) {
-            case "phone" -> privacy.setPhone(status);
+            case "phone" -> privacy.setPhone(status); // true会被映射为1
             case "email" -> privacy.setEmail(status);
             case "gender" -> privacy.setGender(status);
             case "wx" -> privacy.setWx(status);

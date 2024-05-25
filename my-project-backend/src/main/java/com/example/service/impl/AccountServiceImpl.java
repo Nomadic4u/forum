@@ -71,8 +71,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
      * @return 操作结果，null表示正常，否则为错误原因
      */
     public String registerEmailVerifyCode(String type, String email, String address){
-        synchronized (address.intern()) {
-            if(!this.verifyLimit(address))
+        synchronized (address.intern()) { // 防止并发请求. 提供请求频率限制的准确性
+            if(!this.verifyLimit(address)) // 简述一下这个流程, 首先将address传入, 生成对应的key之后, 利用函数式编程, 先查询redis中是否存在这个key, 存在的话就直接自增, 然后与设置的频率作对比
                 return "请求频繁，请稍后再试";
             Random random = new Random();
             int code = random.nextInt(899999) + 100000;
