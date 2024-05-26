@@ -30,6 +30,12 @@ public class ForumController {
     @Resource
     ControllerUtils utils;
 
+    /**
+     * 获取对应城市的天气信息
+     * @param longitude 经度
+     * @param latitude 纬度
+     * @return 天气信息实例类
+     */
     @GetMapping("/weather")
     public RestBean<WeatherVO> weather(double longitude, double latitude){
         WeatherVO vo = service.fetchWeather(longitude, latitude);
@@ -37,6 +43,10 @@ public class ForumController {
                 RestBean.failure(400, "获取地理位置信息与天气失败，请联系管理员！") : RestBean.success(vo);
     }
 
+    /**
+     * 获取帖子类型介绍
+     * @return 类型实体类
+     */
     @GetMapping("/types")
     public RestBean<List<TopicTypeVO>> listTypes(){
         return RestBean.success(topicService
@@ -46,6 +56,12 @@ public class ForumController {
                 .toList());
     }
 
+    /**
+     * 发布新的帖子
+     * @param vo 帖子实体类
+     * @param id 用户id
+     * @return 是否成功
+     */
     @PostMapping("/create-topic")
     public RestBean<Void> createTopic(@Valid @RequestBody TopicCreateVO vo,
                                       @RequestAttribute(Const.ATTR_USER_ID) int id) {

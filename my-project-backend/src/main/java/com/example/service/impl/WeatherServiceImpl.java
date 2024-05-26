@@ -39,7 +39,7 @@ public class WeatherServiceImpl implements WeatherService {
         JSONObject geo = this.decompressStingToJson(rest.getForObject(
                 "https://geoapi.qweather.com/v2/city/lookup?location=" + longitude + "," + latitude + "&key=" + key, byte[].class));
         if (geo == null) return null;
-        // 解析地理位置数据, 火毒location对象的第一个元素
+        // 解析地理位置数据, 获取location对象的第一个元素
         JSONObject location = geo.getJSONArray("location").getJSONObject(0);
         // 获取城市id
         int id = location.getInteger("id");
