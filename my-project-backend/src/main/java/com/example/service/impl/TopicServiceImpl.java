@@ -52,6 +52,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     StringRedisTemplate template;
 
     private Set<Integer> types = null;
+
     @PostConstruct
     private void initTypes() {
         types = this.listTypes()
@@ -67,19 +68,19 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     @Override
     public String createTopic(int uid, TopicCreateVO vo) {
-        if(!textLimitCheck(vo.getContent()))
+        if (!textLimitCheck(vo.getContent()))
             return "文章内容太多，发文失败！";
-        if(!types.contains(vo.getType()))
+        if (!types.contains(vo.getType()))
             return "文章类型非法！";
         String key = Const.FORUM_TOPIC_CREATE_COUNTER + uid;
-        if(!flowUtils.limitPeriodCounterCheck(key, 3, 3600))
+        if (!flowUtils.limitPeriodCounterCheck(key, 3, 3600))
             return "发文频繁，请稍后再试！";
         Topic topic = new Topic();
         BeanUtils.copyProperties(vo, topic);
         topic.setContent(vo.getContent().toJSONString());
         topic.setUid(uid);
         topic.setTime(new Date());
-        if(this.save(topic)) {
+        if (this.save(topic)) {
             // 如果添加了新的帖子, 就将之前的缓存全部清除
             cacheUtils.deleteCachePattern(Const.FORUM_TOPIC_PREVIEW_CACHE + "*");
             return null;
@@ -104,15 +105,15 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     public List<TopicPreviewVO> listTopicByPage(int pageNumber, int type) {
         String key = Const.FORUM_TOPIC_PREVIEW_CACHE + pageNumber + ":" + type;
         List<TopicPreviewVO> list = cacheUtils.takeListFromCache(key, TopicPreviewVO.class);
-        if(list != null)
+        if (list != null)
             return list;
         Page<Topic> page = Page.of(pageNumber, 10); // 设置分页参数
-        if(type == 0)
+        if (type == 0)
             baseMapper.selectPage(page, Wrappers.<Topic>query().orderByDesc("time"));
         else
             baseMapper.selectPage(page, Wrappers.<Topic>query().eq("type", type).orderByDesc("time"));
         List<Topic> topics = page.getRecords(); // 获取当前页的记录列表
-        if(topics.isEmpty()) return null;
+        if (topics.isEmpty()) return null;
         list = topics.stream().map(this::resolveToPreview).toList();
         cacheUtils.saveListToCache(key, list, 60);
         return list;
@@ -132,6 +133,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     /**
      * 获取帖子详细内容
+     *
      * @param tid 帖子ID
      * @return 帖子实体类
      */
@@ -152,8 +154,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     /**
      * 用于用户交互(点赞/收藏)
+     *
      * @param interact 交互实体类
-     * @param state 交换状态
+     * @param state    交换状态
      */
     @Override
     public void interact(Interact interact, boolean state) {
@@ -178,8 +181,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     private final Map<String, Boolean> state = new HashMap<>();
     // 定时任务调度器, 创建了一个含有两个线程的线程池
     ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
+
     private void saveInteractSchedule(String type) {
-        if(!state.getOrDefault(type, false)) { // 若不存在或者为false, 说明当前该类型的交互没有被调度
+        if (!state.getOrDefault(type, false)) { // 若不存在或者为false, 说明当前该类型的交互没有被调度
             state.put(type, true); // 此时被调度
             service.schedule(() -> { // 调度任务
                 this.saveInteract(type);
@@ -196,21 +200,21 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
             List<Interact> uncheck = new LinkedList<>();
             // 从redis中读取所有的交互记录
             template.opsForHash().entries(type).forEach((k, v) -> { // 先回返回哈希表type中的所有条目, 返回一个map
-                if(Boolean.parseBoolean(v.toString()))
+                if (Boolean.parseBoolean(v.toString()))
                     check.add(Interact.parseInteract(k.toString(), type));// 根据k去创建对象
                 else
                     uncheck.add(Interact.parseInteract(k.toString(), type));
             });
             // 保存到数据库
-            if(!check.isEmpty())
+            if (!check.isEmpty())
                 baseMapper.addInteract(check, type);
-            if(!uncheck.isEmpty())
+            if (!uncheck.isEmpty())
                 baseMapper.deleteInteract(uncheck, type);
             template.delete(type);
         }
     }
 
-    private <T> T fillUserDetailsByPrivacy(T target, int uid){
+    private <T> T fillUserDetailsByPrivacy(T target, int uid) {
         AccountDetails details = accountDetailsMapper.selectById(uid);
         Account account = accountMapper.selectById(uid);
         AccountPrivacy accountPrivacy = accountPrivacyMapper.selectById(uid);
@@ -222,6 +226,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     /**
      * 主要用于将Topic转为TopicPreviewVO
+     *
      * @param topic Topic对象
      * @return TopicPreviewVO对象
      */
@@ -236,10 +241,10 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         JSONArray ops = JSONObject.parseObject(topic.getContent()).getJSONArray("ops");
         for (Object op : ops) {
             Object insert = JSONObject.from(op).get("insert");
-            if(insert instanceof String text) {
-                if(previewText.length() >= 300) continue;
+            if (insert instanceof String text) {
+                if (previewText.length() >= 300) continue;
                 previewText.append(text);
-            } else if(insert instanceof Map<?, ?> map) {
+            } else if (insert instanceof Map<?, ?> map) {
                 Optional.ofNullable(map.get("image"))
                         .ifPresent(obj -> images.add(obj.toString()));
             }
@@ -250,11 +255,11 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     }
 
     private boolean textLimitCheck(JSONObject object) {
-        if(object == null) return false;
+        if (object == null) return false;
         long length = 0;
         for (Object op : object.getJSONArray("ops")) {
             length += JSONObject.from(op).getString("insert").length();
-            if(length > 20000) return false;
+            if (length > 20000) return false;
         }
         return true;
     }
