@@ -179,25 +179,29 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     // 定时任务调度器, 创建了一个含有两个线程的线程池
     ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
     private void saveInteractSchedule(String type) {
-        if(!state.getOrDefault(type, false)) {
-            state.put(type, true);
-            service.schedule(() -> {
+        if(!state.getOrDefault(type, false)) { // 若不存在或者为false, 说明当前该类型的交互没有被调度
+            state.put(type, true); // 此时被调度
+            service.schedule(() -> { // 调度任务
                 this.saveInteract(type);
                 state.put(type, false);
-            }, 3, TimeUnit.SECONDS);
+            }, 3, TimeUnit.SECONDS); // 延迟3s后执行, 可以防止频繁操作(例如用户频繁的去点赞, 就可以将3s内的操作合并成一次处理), 这里是后台异步运行
         }
     }
 
+    // 交互数据的持久化
     private void saveInteract(String type) {
         synchronized (type.intern()) {
+            // 存储需要添加和删除的交互记录
             List<Interact> check = new LinkedList<>();
             List<Interact> uncheck = new LinkedList<>();
-            template.opsForHash().entries(type).forEach((k, v) -> {
+            // 从redis中读取所有的交互记录
+            template.opsForHash().entries(type).forEach((k, v) -> { // 先回返回哈希表type中的所有条目, 返回一个map
                 if(Boolean.parseBoolean(v.toString()))
-                    check.add(Interact.parseInteract(k.toString(), type));
+                    check.add(Interact.parseInteract(k.toString(), type));// 根据k去创建对象
                 else
                     uncheck.add(Interact.parseInteract(k.toString(), type));
             });
+            // 保存到数据库
             if(!check.isEmpty())
                 baseMapper.addInteract(check, type);
             if(!uncheck.isEmpty())

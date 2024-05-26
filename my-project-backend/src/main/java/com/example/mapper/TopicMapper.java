@@ -14,8 +14,8 @@ import java.util.List;
 public interface TopicMapper extends BaseMapper<Topic> {
     @Insert("""
             <script>
-                insert ignore into db_topic_interact_${type} values
-                <foreach collection ="interacts" item="item" separator =",">
+                INSERT IGNORE INTO db_topic_interact_${type} VALUES
+                <foreach collection ="interacts" item="item" SEPARATOR =",">
                     (#{item.tid}, #{item.uid}, #{item.time})
                 </foreach>
             </script>
@@ -24,27 +24,27 @@ public interface TopicMapper extends BaseMapper<Topic> {
 
     @Delete("""
             <script>
-                delete from db_topic_interact_${type} where
-                <foreach collection="interacts" item="item" separator=" or ">
-                    (tid = #{item.tid} and uid = #{item.uid})
+                DELETE FROM db_topic_interact_${type} WHERE
+                <foreach collection="interacts" item="item" SEPARATOR=" or ">
+                    (tid = #{item.tid} AND uid = #{item.uid})
                 </foreach>
             </script>
             """)
     int deleteInteract(List<Interact> interacts, String type);
 
     @Select("""
-            select count(*) from db_topic_interact_${type} where tid = #{tid}
+            SELECT COUNT(*) FROM db_topic_interact_${type} WHERE tid = #{tid}
             """)
     int interactCount(int tid, String type);
 
     @Select("""
-            select count(*) from db_topic_interact_${type} where tid = #{tid} and uid = #{uid}
+            SELECT COUNT(*) FROM db_topic_interact_${type} WHERE tid = #{tid} AND uid = #{uid}
             """)
     int userInteractCount(int tid, int uid, String type);
 
     @Select("""
-            select * from db_topic_interact_collect left join db_topic on tid = db_topic.id
-             where db_topic_interact_collect.uid = #{uid}
+            SELECT * FROM db_topic_interact_collect LEFT JOIN db_topic ON tid = db_topic.id
+             WHERE db_topic_interact_collect.uid = #{uid}
             """)
     List<Topic> collectTopics(int uid);
 }
