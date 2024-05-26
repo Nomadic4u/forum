@@ -5,13 +5,16 @@ import lombok.Data;
 
 import java.util.Date;
 
+/**
+ * 用来处理交互请求
+ */
 @Data
 @AllArgsConstructor
 public class Interact {
     Integer tid;
     Integer uid;
     Date time;
-    String type;
+    String type; // 请求类型
 
     // 生成键的方法，格式为 "tid:uid"
     public String toKey() {

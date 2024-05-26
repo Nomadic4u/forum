@@ -15,6 +15,7 @@ public class TopicDetailVO {
     User user;
     Interact interact;
 
+    // 该用户是否收藏或点赞
     @Data
     @AllArgsConstructor
     public static class Interact {

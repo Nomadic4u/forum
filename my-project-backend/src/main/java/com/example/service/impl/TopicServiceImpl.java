@@ -80,6 +80,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         topic.setUid(uid);
         topic.setTime(new Date());
         if(this.save(topic)) {
+            // 如果添加了新的帖子, 就将之前的缓存全部清除
             cacheUtils.deleteCachePattern(Const.FORUM_TOPIC_PREVIEW_CACHE + "*");
             return null;
         } else {
@@ -105,12 +106,12 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         List<TopicPreviewVO> list = cacheUtils.takeListFromCache(key, TopicPreviewVO.class);
         if(list != null)
             return list;
-        Page<Topic> page = Page.of(pageNumber, 10);
+        Page<Topic> page = Page.of(pageNumber, 10); // 设置分页参数
         if(type == 0)
             baseMapper.selectPage(page, Wrappers.<Topic>query().orderByDesc("time"));
         else
             baseMapper.selectPage(page, Wrappers.<Topic>query().eq("type", type).orderByDesc("time"));
-        List<Topic> topics = page.getRecords();
+        List<Topic> topics = page.getRecords(); // 获取当前页的记录列表
         if(topics.isEmpty()) return null;
         list = topics.stream().map(this::resolveToPreview).toList();
         cacheUtils.saveListToCache(key, list, 60);
@@ -129,6 +130,11 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         }).toList();
     }
 
+    /**
+     * 获取帖子详细内容
+     * @param tid 帖子ID
+     * @return 帖子实体类
+     */
     @Override
     public TopicDetailVO getTopic(int tid) {
         TopicDetailVO vo = new TopicDetailVO();
@@ -144,23 +150,33 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return vo;
     }
 
+    /**
+     * 用于用户交互(点赞/收藏)
+     * @param interact 交互实体类
+     * @param state 交换状态
+     */
     @Override
     public void interact(Interact interact, boolean state) {
         String type = interact.getType();
-        synchronized (type.intern()) {
-            template.opsForHash().put(type, interact.toKey(), Boolean.toString(state));
+        synchronized (type.intern()) { // 锁的是点赞这个动作
+            template.opsForHash().put(type, interact.toKey(), Boolean.toString(state)); // 这个用到了hash的数据结构
             this.saveInteractSchedule(type);
         }
     }
 
     private boolean hasInteract(int tid, int uid, String type) {
         String key = tid + ":" + uid;
-        if (template.opsForHash().hasKey(type, key))
+        if (template.opsForHash().hasKey(type, key)) //这里用了一个hash去存贮
             return Boolean.parseBoolean(template.opsForHash().entries(type).get(key).toString());
         return baseMapper.userInteractCount(tid, uid, type) > 0;
     }
 
+    /**
+     * 这里实现了一个简单的交互操作调度器, 用于延迟处理交互操作
+     */
+    // 状态映射, 其中的值表示该类型的交互操作是否在调度中.
     private final Map<String, Boolean> state = new HashMap<>();
+    // 定时任务调度器, 创建了一个含有两个线程的线程池
     ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
     private void saveInteractSchedule(String type) {
         if(!state.getOrDefault(type, false)) {
@@ -194,12 +210,17 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         AccountDetails details = accountDetailsMapper.selectById(uid);
         Account account = accountMapper.selectById(uid);
         AccountPrivacy accountPrivacy = accountPrivacyMapper.selectById(uid);
-        String[] ignores = accountPrivacy.hiddenFields();
+        String[] ignores = accountPrivacy.hiddenFields(); // 获取被忽略的字段
         BeanUtils.copyProperties(account, target, ignores);
         BeanUtils.copyProperties(details, target, ignores);
         return target;
     }
 
+    /**
+     * 主要用于将Topic转为TopicPreviewVO
+     * @param topic Topic对象
+     * @return TopicPreviewVO对象
+     */
     private TopicPreviewVO resolveToPreview(Topic topic) {
         TopicPreviewVO vo = new TopicPreviewVO();
         BeanUtils.copyProperties(accountMapper.selectById(topic.getUid()), vo);

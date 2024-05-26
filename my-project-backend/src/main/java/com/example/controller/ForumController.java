@@ -68,22 +68,45 @@ public class ForumController {
         return utils.messageHandle(() -> topicService.createTopic(id, vo));
     }
 
+    /**
+     * 帖子展示
+     * @param page 页码
+     * @param type 帖子类型
+     * @return 帖子实体类
+     */
     @GetMapping("/list-topic")
     public RestBean<List<TopicPreviewVO>> listTopic(@RequestParam @Min(0) int page,
                                                     @RequestParam @Min(0) int type) {
         return RestBean.success(topicService.listTopicByPage(page + 1, type));
     }
 
+    /**
+     * 获取置顶帖子列表
+     * @return 帖子实体类
+     */
     @GetMapping("/top-topic")
     public RestBean<List<TopicTopVO>> topTopic(){
         return RestBean.success(topicService.listTopTopics());
     }
 
+    /**
+     * 帖子详细内容
+     * @param tid 帖子id
+     * @return 帖子实体类
+     */
     @GetMapping("/topic")
     public RestBean<TopicDetailVO> topic(@RequestParam @Min(0) int tid){
         return RestBean.success(topicService.getTopic(tid));
     }
 
+    /**
+     * 处理用户的交互(点赞/收藏)请求
+     * @param tid 帖子ID
+     * @param type 交互类型
+     * @param state 是添加/取消
+     * @param id 用户ID
+     * @return 是否成功
+     */
     @GetMapping("/interact")
     public RestBean<Void> interact(@RequestParam @Min(0) int tid,
                                    @RequestParam @Pattern(regexp = "(like|collect)") String type,
