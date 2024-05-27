@@ -18,6 +18,12 @@ public class ObjectController {
     @Resource
     ImageService service;
 
+    /**
+     * 从minio中获取图片
+     * @param request 响应
+     * @param response 请求
+     * @throws Exception 异常
+     */
     @GetMapping("/images/**")
     public void imageFetch(HttpServletRequest request, HttpServletResponse response) throws Exception {
         response.setHeader("Content-Type", "image/jpg");

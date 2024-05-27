@@ -89,6 +89,11 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         }
     }
 
+    /**
+     * 返回
+     * @param uid
+     * @return
+     */
     @Override
     public List<TopicPreviewVO> listTopicCollects(int uid) {
         return baseMapper.collectTopics(uid)

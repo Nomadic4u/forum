@@ -19,6 +19,14 @@ public class ImageController {
     @Resource
     ImageService service;
 
+    /**
+     * 用户在新建帖子中添加图片
+     * @param file 图片文件
+     * @param id 用户id
+     * @param response 响应
+     * @return 图片的url
+     * @throws IOException IO异常
+     */
     @PostMapping("/cache")
     public RestBean<String> uploadImage(@RequestParam("file") MultipartFile file,
                                         @RequestAttribute(Const.ATTR_USER_ID) int id,
@@ -36,6 +44,13 @@ public class ImageController {
         }
     }
 
+    /**
+     * 用户上传头像
+     * @param file 头像文件
+     * @param id 用户id
+     * @return 图片url
+     * @throws IOException IO异常
+     */
     @PostMapping("/avatar")
     public RestBean<String> uploadAvatar(@RequestParam("file") MultipartFile file,
                                          @RequestAttribute(Const.ATTR_USER_ID) int id) throws IOException {

@@ -37,15 +37,28 @@ public class ImageServiceImpl extends ServiceImpl<ImageStoreMapper, StoreImage> 
 
     private final SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd");
 
+    /**
+     * 从 Minio 存储中获取图像并将其写入输出流。
+     *
+     * @param stream 输出流，将图像数据写入其中。
+     * @param image  图像在 Minio 存储中的路径。
+     * @throws Exception 如果在获取或写入图像时发生错误。
+     */
     @Override
     public void fetchImageFromMinio(OutputStream stream, String image) throws Exception {
+        // 创建 GetObjectArgs 对象，设置 bucket 名称和对象路径
         GetObjectArgs args = GetObjectArgs.builder()
-                .bucket("study")
-                .object(image)
+                .bucket("study")  // 指定 Minio 存储桶的名称
+                .object(image)    // 指定要获取的对象（图像）的路径
                 .build();
+
+        // 从 Minio 客户端获取对象响应，该对象包含了图像的数据
         GetObjectResponse response = client.getObject(args);
+
+        // 使用 Apache Commons IO 的 IOUtils.copy 方法，将响应中的数据复制到输出流
         IOUtils.copy(response, stream);
     }
+
 
     @Override
     public String uploadImage(MultipartFile file, int id) throws IOException {
