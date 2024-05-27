@@ -1,0 +1,54 @@
+# 开发环境配置
+springdoc:
+  paths-to-match: /api/**
+  swagger-ui:
+    operations-sorter: alpha
+spring:
+  mail:
+    host: smtp.163.com
+    username: 18989152637@163.com
+    password: EUMJBGDXOGPXPDOO
+  rabbitmq:
+    addresses: 8.137.50.120
+    port: 5672
+    username: admin
+    password: 20031213dmyD!
+    virtual-host: mail
+  datasource:
+    url: jdbc:mysql://8.137.50.120:3306/study
+    username: root
+    password: 20031213dmy
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      port: 6379
+      host: 8.137.50.120
+      password: 20031213dmy
+      database: 2
+  security:
+    jwt:
+      key: 'abcdefghijklmn'
+      expire: 72
+      limit:
+        base: 10
+        upgrade: 300
+        frequency: 30
+    filter:
+      order: -100
+  web:
+    verify:
+      mail-limit: 60
+    flow:
+      period: 3
+      limit: 50
+      block: 30
+    cors:
+      origin: '*'
+      credentials: false
+      methods: '*'
+  minio:
+    endpoint: 'http://8.137.50.120:9000'
+    username: 'minio'
+    password: 'password'
+  weather:
+    key: 37bbdfd307da4b5ead3242193381a7bd
