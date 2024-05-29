@@ -105,6 +105,14 @@ public class ForumController {
         return RestBean.success(topicService.getTopic(tid, id));
     }
 
+    /**
+     * 用户对帖子交互
+     * @param tid 帖子ID
+     * @param type 交互类型
+     * @param state 交互状态
+     * @param id 用户id
+     * @return 帖子详细实体类
+     */
     @GetMapping("/interact")
     public RestBean<TopicDetailVO> topic(@RequestParam @Min(0) int tid,
                                          @RequestParam @Pattern(regexp = "(like|collect)") String type,
@@ -125,6 +133,12 @@ public class ForumController {
         return RestBean.success(topicService.listCollectTopic(id));
     }
 
+    /**
+     * 更新帖子
+     * @param vo 更新帖子实体类
+     * @param id 用户id
+     * @return 是否成功
+     */
     @PostMapping("/update-topic")
     public RestBean<Void> updateTopic(@Valid @RequestBody TopicUpdateVO vo,
                                       @RequestAttribute(Const.ATTR_USER_ID) int id) {
