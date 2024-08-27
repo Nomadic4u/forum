@@ -25,9 +25,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 @Service
@@ -244,6 +242,13 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
      */
     private final Map<String, Boolean> state = new HashMap<>();
     ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
+//    ThreadPoolExecutor service = new ThreadPoolExecutor(2,
+//        2,
+//        60,
+//        TimeUnit.SECONDS,
+//        new ArrayBlockingQueue<>(2),
+//        Executors.defaultThreadFactory(),
+//        new ThreadPoolExecutor.AbortPolicy());
     private void saveInteractData(String type) {
         if(!state.getOrDefault(type, false)) {
             state.put(type, true);
