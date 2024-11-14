@@ -28,4 +28,11 @@ public final class Const {
     public final static String FORUM_TOPIC_CREATE_COUNTER = "topic:create:";
     public final static String FORUM_TOPIC_COMMENT_COUNTER = "topic:comment:";
     public final static String FORUM_TOPIC_PREVIEW_CACHE = "topic:preview:";
+
+    // 签到
+    public final static String USER_SIGN_KEY = "sign:";
+    // 用户在线
+    public final static String Online_User = "online:user";
+    // 用户连续签到
+    public final static String Continue_User = "continue:user:";
 }

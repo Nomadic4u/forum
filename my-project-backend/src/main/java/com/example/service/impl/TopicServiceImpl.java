@@ -14,11 +14,11 @@ import com.example.entity.vo.response.TopicDetailVO;
 import com.example.entity.vo.response.TopicPreviewVO;
 import com.example.entity.vo.response.TopicTopVO;
 import com.example.mapper.*;
+import com.example.mapper.SensitiveWordMapper;
 import com.example.service.NotificationService;
 import com.example.service.TopicService;
-import com.example.utils.CacheUtils;
-import com.example.utils.Const;
-import com.example.utils.FlowUtils;
+import com.example.utils.*;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -47,16 +47,41 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     TopicCommentMapper commentMapper;
 
     @Resource
+    SensitiveWordMapper sensitiveWordMapper;
+
+    @Resource
+    TopicLikeMapper topicLikeMapper;
+
+    @Resource
     FlowUtils flowUtils;
 
     @Resource
     CacheUtils cacheUtils;
 
     @Resource
+    RecommendationUtils recommendationUtils;
+
+    @Resource
     StringRedisTemplate template;
 
     @Resource
     NotificationService notificationService;
+
+    private Set<String> sensitiveWordSet = new HashSet<>();
+
+    @PostConstruct
+    public void init() {
+        loadSensitiveWords();
+    }
+
+    private void loadSensitiveWords() {
+        List<String> words = sensitiveWordMapper.selectAllSensitiveWords();
+        sensitiveWordSet.addAll(words);
+    }
+
+    public Set<String> getSensitiveWords() {
+        return sensitiveWordSet;
+    }
 
     @Override
     public List<TopicType> listType() {
@@ -76,17 +101,22 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     @Override
     public String createTopic(int uid, TopicCreateVO vo) {
-        if(!this.textLimitCheck(vo.getContent(), 20000))
+        if (!this.textLimitCheck(vo.getContent(), 20000))
             return "文章长度过大，发文失败！";
         String key = Const.FORUM_TOPIC_CREATE_COUNTER + uid;
-        if(!flowUtils.limitPeriodCounterCheck(key, 3, 3600))
+        if (!flowUtils.limitPeriodCounterCheck(key, 3, 3600))
             return "发文频繁，请稍后再试!";
+
+        // 进行DFA敏感词检测
+        vo.setTitle(SensitiveWordUtil.replaceSensitiveWord(sensitiveWordSet, vo.getTitle(), '*', 2));
+        vo.setTitle(SensitiveWordUtil.replaceSensitiveWord(sensitiveWordSet, vo.getContent().toString(), '*', 2));
+
         Topic topic = new Topic();
         BeanUtils.copyProperties(vo, topic);
         topic.setContent(vo.getContent().toJSONString());
         topic.setUid(uid);
         topic.setTime(new Date());
-        if(this.save(topic)) {
+        if (this.save(topic)) {
             cacheUtils.deleteCache(Const.FORUM_TOPIC_PREVIEW_CACHE + "*");
             return null;
         } else {
@@ -94,7 +124,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         }
     }
 
-    public List<TopicPreviewVO> listCollectTopic(int uid){
+    public List<TopicPreviewVO> listCollectTopic(int uid) {
         return baseMapper.collectTopics(uid)
                 .stream()
                 .map(topic -> {
@@ -105,20 +135,64 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
                 .toList();
     }
 
-    public List<TopicPreviewVO> listTopicByPage(int pageNumber, int type){
+    /**
+     * 展示帖子
+     *
+     * @param pageNumber 页数
+     * @param type       类型
+     * @return
+     */
+    public List<TopicPreviewVO> listTopicByPage(int id, int pageNumber, int type) {
         String key = Const.FORUM_TOPIC_PREVIEW_CACHE + pageNumber + ":" + type;
         List<TopicPreviewVO> list = cacheUtils.takeListFromCache(key, TopicPreviewVO.class);
-        if(list != null) return list;
+        if (list != null) return list;
         //无缓存从数据库读取
-        Page<Topic> page = Page.of(pageNumber, 10);
-        if(type == 0)
-            baseMapper.selectPage(page, Wrappers.<Topic>query().orderByDesc("time"));
-        else
-            baseMapper.selectPage(page, Wrappers.<Topic>query().eq("type", type).orderByDesc("time"));
-        List<Topic> topics = page.getRecords();
-        if(topics.isEmpty()) return null;
+
+        // 首先进行推荐帖子
+        // 获取所有用户
+        List<Account> accounts = accountMapper.selectList(null);
+        Map<String, Set<Integer>> accountToBlogs = new HashMap<>();
+        Map<String, Integer> num = new HashMap<>();
+        for (Account account : accounts) {
+            // 存放用户点过赞的帖子id
+            Set<Integer> blogIds = new HashSet<>();
+            List<Integer> blogIdsFromUpvote = topicLikeMapper.selectTidsByUid(account.getId());
+            blogIds.addAll(blogIdsFromUpvote);
+
+            accountToBlogs.put(String.valueOf(account.getId()), blogIds);
+            num.put(String.valueOf(account.getId()), blogIds.size());
+        }
+
+        // 获得协同矩阵
+        Map<String, Map<String, Integer>> cfMatrix = recommendationUtils.getCFMatrix(recommendationUtils.getItemToUser(accountToBlogs));
+
+        // 计算相似度
+        Map<String, Map<String, Double>> sim = recommendationUtils.getSimMatrix(cfMatrix, num);
+
+        // 根据用户推荐帖子
+        Set<Integer> recommendBlogs = recommendationUtils.recommendForUser(sim, accountToBlogs, 5, 10, String.valueOf(id));
+        List<Topic> topics = new ArrayList<>();
+        for (Integer recommendBlog : recommendBlogs) {
+            Topic topic = baseMapper.selectById(recommendBlog);
+            if (topic.getType() == type || type == 0)
+                topics.add(topic);
+        }
+
+        // 进行判断 是否达到10个, 如果没有就在数据库中补全
+        if (topics.size() < 10) {
+            int needCount = 10 - topics.size();
+            Page<Topic> page = Page.of(pageNumber, needCount);
+            if (type == 0)
+                baseMapper.selectPage(page, Wrappers.<Topic>query().orderByDesc("time"));
+            else
+                baseMapper.selectPage(page, Wrappers.<Topic>query().eq("type", type).orderByDesc("time"));
+            topics.addAll(page.getRecords());
+        }
+
+        if (topics.isEmpty()) return null;
         list = topics.stream().map(this::resolveToPreview).toList();
         cacheUtils.saveListToCache(key, list, 20);  //进缓存
+
         return list;
     }
 
@@ -163,10 +237,10 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 
     @Override
     public String createComment(AddCommentVO vo, int uid) {
-        if(!this.textLimitCheck(JSONObject.parseObject(vo.getContent()), 2000))
+        if (!this.textLimitCheck(JSONObject.parseObject(vo.getContent()), 2000))
             return "评论长度过大，发表失败！";
         String key = Const.FORUM_TOPIC_COMMENT_COUNTER + uid;
-        if(!flowUtils.limitPeriodCounterCheck(key, 2, 60))
+        if (!flowUtils.limitPeriodCounterCheck(key, 2, 60))
             return "发表评论频繁，请稍后再试!";
         TopicComment comment = new TopicComment();
         comment.setUid(uid);
@@ -175,19 +249,19 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         commentMapper.insert(comment);
         Topic topic = baseMapper.selectById(vo.getTid());
         Account account = accountMapper.selectById(uid);
-        if(vo.getQuote() > 0) {
+        if (vo.getQuote() > 0) {
             TopicComment com = commentMapper.selectById(vo.getQuote());
-            if(!Objects.equals(com.getUid(), account.getId())) {
+            if (!Objects.equals(com.getUid(), account.getId())) {
                 notificationService.addNotification(com.getUid(),
                         "您有新的帖子评论回复",
-                        account.getUsername()+" 回复了你发表的评论，快去看看吧！",
-                        "success", "/index/post-detail/"+com.getTid());
+                        account.getUsername() + " 回复了你发表的评论，快去看看吧！",
+                        "success", "/index/post-detail/" + com.getTid());
             }
-        } else if(!Objects.equals(topic.getUid(), account.getId())) {
+        } else if (!Objects.equals(topic.getUid(), account.getId())) {
             notificationService.addNotification(topic.getUid(),
                     "您有新的帖子回复",
-                    account.getUsername()+" 回复了你发表的主题: "+topic.getTitle() +"，快去看看吧！",
-                    "success", "/index/post-detail/"+topic.getId());
+                    account.getUsername() + " 回复了你发表的主题: " + topic.getTitle() + "，快去看看吧！",
+                    "success", "/index/post-detail/" + topic.getId());
         }
         return null;
     }
@@ -207,13 +281,14 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return comments.getRecords().stream().map(dto -> {
             CommentVO vo = new CommentVO();
             BeanUtils.copyProperties(dto, vo);
-            if(dto.getQuote() > 0) {
+            if (dto.getQuote() > 0) {
                 TopicComment comment = commentMapper.selectOne(Wrappers.<TopicComment>query()
                         .eq("id", dto.getQuote()));
-                if(comment != null) {
+                if (comment != null) {
                     JSONObject object = JSONObject.parseObject(comment.getContent());
                     StringBuilder text = new StringBuilder();
-                    this.shortContent(object.getJSONArray("ops"), text, ignore -> {});
+                    this.shortContent(object.getJSONArray("ops"), text, ignore -> {
+                    });
                     vo.setQuote(text.toString());
                 } else {
                     vo.setQuote("此评论已删除");
@@ -226,9 +301,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         }).toList();
     }
 
-    private boolean hasInteract(int tid, int uid, String type){
+    private boolean hasInteract(int tid, int uid, String type) {
         String key = tid + ":" + uid;
-        if(template.opsForHash().hasKey(type, key))
+        if (template.opsForHash().hasKey(type, key))
             return Boolean.parseBoolean(template.opsForHash().entries(type).get(key).toString());
         return baseMapper.userInteractCount(tid, uid, type) > 0;
     }
@@ -242,7 +317,8 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
      */
     private final Map<String, Boolean> state = new HashMap<>();
     ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
-//    ThreadPoolExecutor service = new ThreadPoolExecutor(2,
+
+    //    ThreadPoolExecutor service = new ThreadPoolExecutor(2,
 //        2,
 //        60,
 //        TimeUnit.SECONDS,
@@ -250,7 +326,7 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
 //        Executors.defaultThreadFactory(),
 //        new ThreadPoolExecutor.AbortPolicy());
     private void saveInteractData(String type) {
-        if(!state.getOrDefault(type, false)) {
+        if (!state.getOrDefault(type, false)) {
             state.put(type, true);
             service.schedule(() -> {
                 this.saveInteract(type);
@@ -264,17 +340,59 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
             List<Interact> check = new LinkedList<>();
             List<Interact> uncheck = new LinkedList<>();
             template.opsForHash().entries(type).forEach((k, v) -> {
-                if(Boolean.parseBoolean(v.toString()))
+                if (Boolean.parseBoolean(v.toString()))
                     check.add(Interact.parseInteract(k.toString(), type));
                 else
                     uncheck.add(Interact.parseInteract(k.toString(), type));
             });
-            if(!check.isEmpty())
+            if (!check.isEmpty())
                 baseMapper.addInteract(check, type);
-            if(!uncheck.isEmpty())
+            if (!uncheck.isEmpty())
                 baseMapper.deleteInteract(uncheck, type);
-            template.delete("collects");
+            template.delete(type);
         }
+
+//        //            lua脚本
+//        String luaScript = "local data = redis.call('HGETALL', KEYS[1]);" +
+//                           "local check = {};" +
+//                           "local uncheck = {};" +
+//                           "for i = 1, #data, 2 do " +
+//                           "    local key = data[i];" +
+//                           "    local value = data[i+1];" +
+//                           "    if value == 'true' then " +
+//                           "        table.insert(check, key);" +
+//                           "    else " +
+//                           "        table.insert(uncheck, key);" +
+//                           "    end;" +
+//                           "end;" +
+//                           "redis.call('DEL', KEYS[1]);" +
+//                           "return {check, uncheck};";
+////            创建RedisScript对象
+//        DefaultRedisScript<List> redisScript = new DefaultRedisScript<>();
+//        redisScript.setScriptText(luaScript);
+//        redisScript.setResultType(List.class);
+//
+////        执行lua脚本并返回结果
+//        List<Object> result = template.execute(redisScript, Collections.singletonList(type));
+//        if (result != null && result.size() == 2) {
+//            List<String> checkKeys = (List<String>) result.get(0); // 第一个列表是check的数据
+//            List<String> uncheckKeys = (List<String>) result.get(1); // 第二个列表是uncheck的数据
+//
+//            List<Interact> checkList = new ArrayList<>();
+//            List<Interact> uncheckList = new ArrayList<>();
+//
+//            // 将 Redis 返回的键转化为 Interact 对象
+//            checkKeys.forEach(key -> checkList.add(Interact.parseInteract(key, type)));
+//            uncheckKeys.forEach(key -> uncheckList.add(Interact.parseInteract(key, type)));
+//
+//            // 将分类好的数据写入 MySQL
+//            if (!checkList.isEmpty()) {
+//                baseMapper.addInteract(checkList, type);
+//            }
+//            if (!uncheckList.isEmpty()) {
+//                baseMapper.deleteInteract(uncheckList, type);
+//            }
+//        }
     }
 
     private <T> T fillUserDetailsByPrivacy(T target, int uid) {
@@ -305,17 +423,17 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     private void shortContent(JSONArray ops, StringBuilder previewText, Consumer<Object> imageHandler) {
         for (Object op : ops) {
             Object insert = JSONObject.from(op).get("insert");
-            if(insert instanceof String text) {
-                if(previewText.length() >= 300) continue;
+            if (insert instanceof String text) {
+                if (previewText.length() >= 300) continue;
                 previewText.append(text);
-            } else if(insert instanceof Map<?, ?> map) {
+            } else if (insert instanceof Map<?, ?> map) {
                 Optional.ofNullable(map.get("image")).ifPresent(imageHandler);
             }
         }
     }
 
     private boolean textLimitCheck(JSONObject object, int limit) {
-        if(object == null) return false;
+        if (object == null) return false;
         long length = 0;
         for (Object op : object.getJSONArray("ops")) {
             length += JSONObject.from(op).getString("insert").length();

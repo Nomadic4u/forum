@@ -18,7 +18,7 @@ public interface TopicService extends IService<Topic> {
     List<TopicType> listType();
     String createTopic(int uid, TopicCreateVO vo);
     void updateTopic(int uid, TopicUpdateVO vo);
-    List<TopicPreviewVO> listTopicByPage(int pageNumber, int type);
+    List<TopicPreviewVO> listTopicByPage(int id, int pageNumber, int type);
     List<TopicTopVO> topTopics();
     TopicDetailVO getTopic(int tid, int uid);
     void interact(Interact interact, boolean state);

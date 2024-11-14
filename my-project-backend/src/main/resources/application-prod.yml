@@ -13,19 +13,19 @@ spring:
     username: 18989152637@163.com
     password: EUMJBGDXOGPXPDOO
   rabbitmq:
-    addresses: localhost
-    username: admin
-    password: admin
+    addresses: 111.231.7.198
+    username: root
+    password: 20031213dmy
     virtual-host: /
   datasource:
-    url: jdbc:mysql://8.137.50.120:3306/study
+    url: jdbc:mysql://111.231.7.198:3306/forum
     username: root
     password: 20031213dmy
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
       port: 6379
-      host: 8.137.50.120
+      host: 111.231.7.198
       password: 20031213dmy
       database: 2
   security:
@@ -50,8 +50,8 @@ spring:
       credentials: false
       methods: '*'
   minio:
-    endpoint: 'http://8.137.50.120:9000'
-    username: 'minio'
-    password: 'password''
+    endpoint: 'http://111.231.7.198:9000'
+    username: 'root'
+    password: '20031213dmy''
   weather:
     key: 37bbdfd307da4b5ead3242193381a7bd
