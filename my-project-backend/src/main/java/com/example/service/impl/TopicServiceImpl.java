@@ -22,6 +22,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -229,10 +230,10 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     @Override
     public void interact(Interact interact, boolean state) {
         String type = interact.getType();
-        synchronized (type.intern()) {
-            template.opsForHash().put(type, interact.toKey(), Boolean.toString(state));
-            saveInteractData(type);
-        }
+//        synchronized (type.intern()) {
+        template.opsForHash().put(type, interact.toKey(), Boolean.toString(state));
+        saveInteractData(type);
+//        }
     }
 
     @Override
@@ -315,84 +316,76 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
      * 将全部Redis暂时缓存的信息一次性加入到数据库，从而缓解MySQL压力，如果
      * 在定时任务已经设定期间又有新的更新到来，仅更新Redis不创建新的延时任务
      */
-    private final Map<String, Boolean> state = new HashMap<>();
+    private final ConcurrentHashMap<String, Boolean> state = new ConcurrentHashMap<>();
     ScheduledExecutorService service = Executors.newScheduledThreadPool(2);
 
-    //    ThreadPoolExecutor service = new ThreadPoolExecutor(2,
-//        2,
-//        60,
-//        TimeUnit.SECONDS,
-//        new ArrayBlockingQueue<>(2),
-//        Executors.defaultThreadFactory(),
-//        new ThreadPoolExecutor.AbortPolicy());
     private void saveInteractData(String type) {
-        if (!state.getOrDefault(type, false)) {
-            state.put(type, true);
+        if (state.putIfAbsent(type, true) == null) {
             service.schedule(() -> {
                 this.saveInteract(type);
-                state.put(type, false);
+                state.remove(type);
             }, 3, TimeUnit.SECONDS);
         }
     }
 
     private void saveInteract(String type) {
-        synchronized (type.intern()) {
-            List<Interact> check = new LinkedList<>();
-            List<Interact> uncheck = new LinkedList<>();
-            template.opsForHash().entries(type).forEach((k, v) -> {
-                if (Boolean.parseBoolean(v.toString()))
-                    check.add(Interact.parseInteract(k.toString(), type));
-                else
-                    uncheck.add(Interact.parseInteract(k.toString(), type));
-            });
-            if (!check.isEmpty())
-                baseMapper.addInteract(check, type);
-            if (!uncheck.isEmpty())
-                baseMapper.deleteInteract(uncheck, type);
-            template.delete(type);
-        }
-
-//        //            lua脚本
-//        String luaScript = "local data = redis.call('HGETALL', KEYS[1]);" +
-//                           "local check = {};" +
-//                           "local uncheck = {};" +
-//                           "for i = 1, #data, 2 do " +
-//                           "    local key = data[i];" +
-//                           "    local value = data[i+1];" +
-//                           "    if value == 'true' then " +
-//                           "        table.insert(check, key);" +
-//                           "    else " +
-//                           "        table.insert(uncheck, key);" +
-//                           "    end;" +
-//                           "end;" +
-//                           "redis.call('DEL', KEYS[1]);" +
-//                           "return {check, uncheck};";
-////            创建RedisScript对象
-//        DefaultRedisScript<List> redisScript = new DefaultRedisScript<>();
-//        redisScript.setScriptText(luaScript);
-//        redisScript.setResultType(List.class);
-//
-////        执行lua脚本并返回结果
-//        List<Object> result = template.execute(redisScript, Collections.singletonList(type));
-//        if (result != null && result.size() == 2) {
-//            List<String> checkKeys = (List<String>) result.get(0); // 第一个列表是check的数据
-//            List<String> uncheckKeys = (List<String>) result.get(1); // 第二个列表是uncheck的数据
-//
-//            List<Interact> checkList = new ArrayList<>();
-//            List<Interact> uncheckList = new ArrayList<>();
-//
-//            // 将 Redis 返回的键转化为 Interact 对象
-//            checkKeys.forEach(key -> checkList.add(Interact.parseInteract(key, type)));
-//            uncheckKeys.forEach(key -> uncheckList.add(Interact.parseInteract(key, type)));
-//
-//            // 将分类好的数据写入 MySQL
-//            if (!checkList.isEmpty()) {
-//                baseMapper.addInteract(checkList, type);
-//            }
-//            if (!uncheckList.isEmpty()) {
-//                baseMapper.deleteInteract(uncheckList, type);
-//            }
+//        synchronized (type.intern()) {
+//            List<Interact> check = new LinkedList<>();
+//            List<Interact> uncheck = new LinkedList<>();
+//            template.opsForHash().entries(type).forEach((k, v) -> {
+//                if (Boolean.parseBoolean(v.toString()))
+//                    check.add(Interact.parseInteract(k.toString(), type));
+//                else
+//                    uncheck.add(Interact.parseInteract(k.toString(), type));
+//            });
+//            if (!check.isEmpty())
+//                baseMapper.addInteract(check, type);
+//            if (!uncheck.isEmpty())
+//                baseMapper.deleteInteract(uncheck, type);
+//            template.delete(type);
 //        }
+
+        //            lua脚本: 读取对应hash的所有键值对, 分为check和uncheck两组, 然后删除对应hash(原子操作)
+        String luaScript = "local data = redis.call('HGETALL', KEYS[1]);" +
+                           "local check = {};" +
+                           "local uncheck = {};" +
+                           "for i = 1, #data, 2 do " +
+                           "    local key = data[i];" +
+                           "    local value = data[i+1];" +
+                           "    if value == 'true' then " +
+                           "        table.insert(check, key);" +
+                           "    else " +
+                           "        table.insert(uncheck, key);" +
+                           "    end;" +
+                           "end;" +
+                           "redis.call('DEL', KEYS[1]);" +
+                           "return {check, uncheck};";
+//            创建RedisScript对象
+        DefaultRedisScript<List> redisScript = new DefaultRedisScript<>();
+        redisScript.setScriptText(luaScript);
+        redisScript.setResultType(List.class);
+
+//        执行lua脚本并返回结果
+        List<Object> result = template.execute(redisScript, Collections.singletonList(type));
+        if (result != null && result.size() == 2) {
+            List<String> checkKeys = (List<String>) result.get(0); // 第一个列表是check的数据
+            List<String> uncheckKeys = (List<String>) result.get(1); // 第二个列表是uncheck的数据
+
+            List<Interact> checkList = new ArrayList<>();
+            List<Interact> uncheckList = new ArrayList<>();
+
+            // 将 Redis 返回的键转化为 Interact 对象
+            checkKeys.forEach(key -> checkList.add(Interact.parseInteract(key, type)));
+            uncheckKeys.forEach(key -> uncheckList.add(Interact.parseInteract(key, type)));
+
+            // 将分类好的数据写入 MySQL
+            if (!checkList.isEmpty()) {
+                baseMapper.addInteract(checkList, type);
+            }
+            if (!uncheckList.isEmpty()) {
+                baseMapper.deleteInteract(uncheckList, type);
+            }
+        }
     }
 
     private <T> T fillUserDetailsByPrivacy(T target, int uid) {

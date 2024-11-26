@@ -52,3 +52,5 @@ spring:
     password: '20031213dmy'
   weather:
     key: 37bbdfd307da4b5ead3242193381a7bd
+
+

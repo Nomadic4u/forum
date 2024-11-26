@@ -7,9 +7,6 @@ import java.util.*;
 /**
  * 敏感词处理工具 - DFA算法实现
  * 用于检测和替换文本中的敏感词
- * @author Java新视界
- * @modifier Java新视界
- * @date 2023/10/25 16:58
  */
 @Component
 public class SensitiveWordUtil {

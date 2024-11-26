@@ -290,10 +290,8 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
                 num >>>= 1;
             }
         }
-        String continue_key = Const.Continue_User + String.valueOf(id) + keySuffix;
-        stringRedisTemplate.opsForValue().set(continue_key, String.valueOf(count), 25, TimeUnit.HOURS);
-
-
+        String continue_key = Const.Continue_User + id + keySuffix;
+        stringRedisTemplate.opsForValue().set(continue_key, String.valueOf(count), 24, TimeUnit.HOURS);
         return null;
     }
 
@@ -326,7 +324,7 @@ public class AccountServiceImpl extends ServiceImpl<AccountMapper, Account> impl
         int dayOfMonth = now.getDayOfMonth();
 
         // 查询缓存
-        String continue_key = Const.Continue_User + String.valueOf(id) + keySuffix;
+        String continue_key = Const.Continue_User + id + keySuffix;
         String res = stringRedisTemplate.opsForValue().get(continue_key);
         if(res != null){
             return Long.valueOf(res);
